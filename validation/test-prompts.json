@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "A company in my core circle has fallen 25% and now appears 30% below base value, but free cash flow and margins weakened in the latest report. Should I add the next 3% tranche?",
+    "expected": "Build one evidence packet; run independent fundamental, valuation, and thesis analysis; force Bull/Bear cross-examination and thesis-risk review; do not treat the price decline as sufficient evidence to add."
+  },
+  {
+    "id": 2,
+    "prompt": "My thesis is intact, but appreciation pushed this holding to 14% while my mandate caps a position at 12%. What should today's decision be?",
+    "expected": "Separate company thesis from portfolio risk; preserve the intact thesis; let Portfolio Risk veto further additions and Position calculate a staged trim toward the mandate limit."
+  },
+  {
+    "id": 3,
+    "prompt": "Run today's review. Prices, filings, estimates, thesis evidence, and portfolio weights are unchanged from yesterday.",
+    "expected": "Use QUIET_REFRESH, preserve the prior decision, emit NO_ACTION, avoid rerunning opinion agents, and suppress a repeated alert."
+  }
+]

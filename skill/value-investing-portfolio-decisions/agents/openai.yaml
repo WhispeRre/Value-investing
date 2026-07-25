@@ -1,0 +1,4 @@
+interface:
+  display_name: "Value Investing Portfolio Decisions"
+  short_description: "Cross-validated value decisions within a defined scope"
+  default_prompt: "Use $value-investing-portfolio-decisions to build daily decisions for my chosen sectors or tickers using independent specialist analysis, Bull/Bear cross-validation, risk review, and staged position sizing."

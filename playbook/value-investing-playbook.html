@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mag 7 Value Decisions</title>
+  <link rel="stylesheet" href="https://alva-ai-static.b-cdn.net/design-system/v1/design-system.css" />
+  <style>
+    html { height: 100%; overflow: hidden; }
+    body { height: 100%; overflow-y: auto; overflow-x: hidden; background: var(--b0-page); }
+    * { box-sizing: border-box; -ms-overflow-style: none; scrollbar-width: none; }
+    *::-webkit-scrollbar { display: none; }
+    .playbook-container { width: 100%; margin: 0 auto; padding: 0 var(--spacing-xxl) var(--spacing-xxxxl); }
+    .tab-bar-wrapper { position: sticky; top: 0; z-index: 10; padding-top: var(--spacing-s); background: var(--b0-page); }
+    .tab-button { appearance: none; border: 0; background: transparent; text-align: left; }
+    .tab-button:focus-visible, .symbol-select:focus-visible, summary:focus-visible { outline: 2px solid var(--main-m1); outline-offset: 2px; }
+    .tab-panel { padding-top: var(--spacing-xl); }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--spacing-xl); align-items: stretch; }
+    .span-3 { grid-column: span 3; }
+    .span-4 { grid-column: span 4; }
+    .span-5 { grid-column: span 5; }
+    .span-8 { grid-column: span 8; }
+    .widget-card { min-width: 0; }
+    .widget-title { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-s); margin-bottom: var(--spacing-m); }
+    .widget-title-text { font-size: 16px; font-weight: 400; color: var(--text-n9); line-height: 26px; }
+    .widget-timestamp { font-size: 12px; color: var(--text-n5); line-height: 20px; white-space: nowrap; }
+    .chart-shell { height: 360px; }
+    .chart-shell.tall { height: 410px; }
+    .chart-shell.compact { height: 310px; }
+    .chart-caption { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-m); margin-top: var(--spacing-xs); color: var(--text-n5); font-size: 11px; line-height: 18px; }
+    .legend-key { display: inline-flex; align-items: center; gap: var(--spacing-xxs); }
+    .legend-swatch { width: 8px; height: 8px; border-radius: 50%; background: var(--grey-g4); }
+    .legend-swatch.add { background: var(--main-m3); }
+    .legend-swatch.hold { background: var(--chart-blue1-main); }
+    .legend-swatch.sell { background: var(--main-m4); }
+    .legend-swatch.learn { border: 1px solid var(--text-n5); background: transparent; }
+    .pulse-strip { display: flex; align-items: stretch; border-top: 0.5px solid var(--line-l12); border-bottom: 0.5px solid var(--line-l12); overflow-x: auto; }
+    .pulse-item { flex: 1 0 132px; padding: var(--spacing-m) var(--spacing-l) var(--spacing-m) 0; }
+    .pulse-item + .pulse-item { padding-left: var(--spacing-l); border-left: 0.5px solid var(--line-l12); }
+    .pulse-label { color: var(--text-n5); font-size: 12px; line-height: 20px; }
+    .pulse-value { margin-top: var(--spacing-xxs); color: var(--text-n9); font-size: 24px; font-weight: 400; line-height: 30px; }
+    .pulse-value.small { font-size: 15px; line-height: 24px; }
+    .pulse-note { margin-top: var(--spacing-xxs); color: var(--text-n5); font-size: 11px; line-height: 18px; }
+    .control-row { display: flex; align-items: end; justify-content: space-between; gap: var(--spacing-m); flex-wrap: wrap; }
+    .control-title { color: var(--text-n9); font-size: 22px; line-height: 30px; }
+    .control-note { margin-top: var(--spacing-xxs); color: var(--text-n5); font-size: 12px; line-height: 20px; }
+    .select-wrap { display: flex; flex-direction: column; gap: var(--spacing-xxs); min-width: 190px; }
+    .select-label { color: var(--text-n7); font-size: 12px; line-height: 20px; }
+    .symbol-select { height: 38px; padding: 0 var(--spacing-s); border: 0.5px solid var(--line-l12); border-radius: var(--radius-ct-s); background: var(--b0-page); color: var(--text-n9); font: inherit; font-size: 14px; }
+    .compact-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--grey-g01); border-radius: var(--radius-ct-s); }
+    .compact-stat { padding: var(--spacing-l); min-width: 0; }
+    .compact-stat + .compact-stat { border-left: 0.5px solid var(--line-l12); }
+    .compact-stat-label { color: var(--text-n5); font-size: 11px; line-height: 18px; }
+    .compact-stat-value { margin-top: var(--spacing-xxs); color: var(--text-n9); font-size: 18px; line-height: 28px; overflow-wrap: anywhere; }
+    .status-row { display: flex; align-items: center; gap: var(--spacing-xs); flex-wrap: wrap; }
+    .status-chip { display: inline-flex; align-items: center; min-height: 24px; padding: var(--spacing-xxs) var(--spacing-xs); border-radius: var(--radius-ct-min); background: var(--grey-g01); color: var(--text-n7); font-size: 12px; line-height: 16px; }
+    .case-stack { display: grid; gap: var(--spacing-s); }
+    .case-row { padding: var(--spacing-m); background: var(--grey-g01); border-radius: var(--radius-ct-s); }
+    .case-label { display: flex; align-items: center; justify-content: space-between; color: var(--text-n9); font-size: 14px; line-height: 22px; }
+    .case-copy { margin-top: var(--spacing-xxs); color: var(--text-n7); font-size: 12px; line-height: 20px; }
+    .evidence-details { border-top: 0.5px solid var(--line-l12); border-bottom: 0.5px solid var(--line-l12); }
+    .evidence-details summary { cursor: pointer; padding: var(--spacing-m) 0; color: var(--text-n9); font-size: 14px; line-height: 22px; }
+    .evidence-grid { display: grid; grid-template-columns: minmax(130px, 0.7fr) minmax(0, 2fr); padding-bottom: var(--spacing-m); }
+    .evidence-key, .evidence-value { padding: var(--spacing-xs) 0; font-size: 12px; line-height: 20px; overflow-wrap: anywhere; }
+    .evidence-key { color: var(--text-n5); }
+    .evidence-value { color: var(--text-n7); }
+    .method-flow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 0.5px solid var(--line-l12); border-bottom: 0.5px solid var(--line-l12); }
+    .method-step { position: relative; min-width: 0; padding: var(--spacing-xl) var(--spacing-m); }
+    .method-step + .method-step { border-left: 0.5px solid var(--line-l12); }
+    .method-index { color: var(--main-m1); font-size: 12px; line-height: 20px; }
+    .method-name { margin-top: var(--spacing-xs); color: var(--text-n9); font-size: 15px; line-height: 24px; }
+    .method-copy { margin-top: var(--spacing-xxs); color: var(--text-n5); font-size: 11px; line-height: 18px; }
+    .boundary-line { display: flex; align-items: baseline; gap: var(--spacing-xs); flex-wrap: wrap; color: var(--text-n5); font-size: 12px; line-height: 20px; }
+    .boundary-line strong { color: var(--text-n9); font-weight: 500; }
+    .loading, .error { padding: var(--spacing-xl) 0; color: var(--text-n5); font-size: 14px; }
+    @media (max-width: 980px) {
+      .dashboard-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--spacing-l); }
+      .span-3, .span-4, .span-5, .span-8 { grid-column: span 4; }
+      .method-flow { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .method-step:nth-child(5) { border-left: 0; }
+      .method-step:nth-child(n+5) { border-top: 0.5px solid var(--line-l12); }
+    }
+    @media (max-width: 768px) {
+      .playbook-container { padding: 0 var(--spacing-m) var(--spacing-xxl); }
+      .tab-bar-wrapper { margin: 0 calc(var(--spacing-m) * -1); padding: var(--spacing-s) var(--spacing-m) 0; }
+      .tab-panel { padding-top: var(--spacing-l); }
+      .chart-shell, .chart-shell.tall { height: 340px; }
+      .chart-shell.compact { height: 300px; }
+      .compact-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .compact-stat:nth-child(3) { border-left: 0; border-top: 0.5px solid var(--line-l12); }
+      .compact-stat:nth-child(4) { border-top: 0.5px solid var(--line-l12); }
+      .method-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .method-step:nth-child(odd) { border-left: 0; }
+      .method-step:nth-child(n+3) { border-top: 0.5px solid var(--line-l12); }
+      .select-wrap { width: 100%; }
+      .evidence-grid { grid-template-columns: 1fr; }
+      .evidence-key { padding-bottom: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { .tab-button { transition: none; } }
+  </style>
+</head>
+<body>
+  <main class="playbook-container">
+    <div class="tab-bar-wrapper">
+      <div class="tab tab-underline tab-l" role="tablist" aria-label="价值投资决策视图" data-tab-group="portfolio">
+        <button class="tab-item tab-button active" type="button" role="tab" id="tab-today" aria-controls="panel-today" aria-selected="true" tabindex="0" data-tab="today" data-text="今日的决策">今日的决策</button>
+        <button class="tab-item tab-button" type="button" role="tab" id="tab-valuation" aria-controls="panel-valuation" aria-selected="false" tabindex="-1" data-tab="valuation" data-text="估值区间">估值区间</button>
+        <button class="tab-item tab-button" type="button" role="tab" id="tab-risk" aria-controls="panel-risk" aria-selected="false" tabindex="-1" data-tab="risk" data-text="逻辑风险的判断">逻辑风险的判断</button>
+        <button class="tab-item tab-button" type="button" role="tab" id="tab-method" aria-controls="panel-method" aria-selected="false" tabindex="-1" data-tab="method" data-text="你遵循的方法">你遵循的方法</button>
+      </div>
+    </div>
+    <section id="panel-today" class="tab-panel" role="tabpanel" aria-labelledby="tab-today" data-tab-panel="today" data-tab-group="portfolio"><div id="today-content" class="loading">正在读取最新决策...</div></section>
+    <section id="panel-valuation" class="tab-panel" role="tabpanel" aria-labelledby="tab-valuation" data-tab-panel="valuation" data-tab-group="portfolio" hidden><div id="valuation-content" class="loading">正在读取估值区间...</div></section>
+    <section id="panel-risk" class="tab-panel" role="tabpanel" aria-labelledby="tab-risk" data-tab-panel="risk" data-tab-group="portfolio" hidden><div id="risk-content" class="loading">正在读取角色判断...</div></section>
+    <section id="panel-method" class="tab-panel" role="tabpanel" aria-labelledby="tab-method" data-tab-panel="method" data-tab-group="portfolio" hidden><div id="method-content" class="loading">正在读取方法说明...</div></section>
+  </main>
+  <script src="https://unpkg.com/@alva-ai/toolkit/dist/browser.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    const DECISION_PATH = "/alva/home/1148973244/feeds/mag7-value-decisions/v1/data/decisions/daily/@last/20";
+    const EVIDENCE_PATH = "/alva/home/1148973244/feeds/mag7-value-decisions/v1/data/research/evidence/@last/20";
+    const ROLE_REPORTS_PATH = "/alva/home/1148973244/feeds/mag7-value-decisions/v1/data/research/role_reports/@last/20";
+    const HASH_BY_TAB = { today: "today", valuation: "valuation", risk: "risk", method: "method" };
+    const TAB_BY_HASH = { today: "today", valuation: "valuation", risk: "risk", method: "method" };
+    const COLORS = { add: "#40a544", hold: "#3d8bd1", sell: "#c76466", current: "#ff9800", base: "#5f75c9", muted: "#838383", light: "#b7b7b7" };
+    const FONT = "'Delight', -apple-system, 'OPPO Sans 4.0', BlinkMacSystemFont, sans-serif";
+    const AXIS_LABEL = { fontSize: 10, color: "rgba(0,0,0,0.7)", fontFamily: FONT, margin: 8 };
+    let model = { decisions: [], evidence: [], roleRows: [] };
+    let charts = {};
+
+    function createAlvaClientConfig() {
+      const params = new URLSearchParams(window.location.search);
+      const pbsvToken = window.alva?.udf?.getViewerToken?.();
+      const apiOrigin = params.get("api_origin");
+      return { ...(pbsvToken ? { pbsvToken } : {}), ...(apiOrigin ? { baseUrl: apiOrigin.replace(/\/$/, "") } : {}) };
+    }
+    function readAlfsJson(path) { return new AlvaToolkit.AlvaClient(createAlvaClientConfig()).fs.read({ path }); }
+    function unwrap(value) {
+      if (typeof value === "string") { try { return unwrap(JSON.parse(value)); } catch (_) { return []; } }
+      if (value && Array.isArray(value.data)) return value.data;
+      return Array.isArray(value) ? value : [];
+    }
+    function parseJson(value, fallback) {
+      if (value == null || value === "") return fallback;
+      if (typeof value !== "string") return value;
+      try { return JSON.parse(value); } catch (_) { return fallback; }
+    }
+    function esc(value) { return String(value == null ? "" : value).replace(/[&<>\"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]; }); }
+    function finite(value) { return value != null && Number.isFinite(Number(value)); }
+    function money(value) { return finite(value) ? "$" + Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"; }
+    function number(value, digits) { return finite(value) ? Number(value).toLocaleString(undefined, { maximumFractionDigits: digits == null ? 1 : digits }) : "—"; }
+    function pct(value) { return finite(value) ? (Number(value) * 100).toFixed(1) + "%" : "—"; }
+    function pctPoint(value) { return finite(value) ? Number(value).toFixed(1) + "%" : "—"; }
+    function latestBySymbol(rows) {
+      const latest = {};
+      rows.forEach(function (row) {
+        if (!row || !row.symbol) return;
+        const stamp = Number(row.date || Date.parse(row.as_of) || 0);
+        const old = latest[row.symbol];
+        const oldStamp = old ? Number(old.date || Date.parse(old.as_of) || 0) : -1;
+        if (!old || stamp >= oldStamp) latest[row.symbol] = row;
+      });
+      return Object.values(latest).sort(function (a, b) { return String(a.symbol).localeCompare(String(b.symbol)); });
+    }
+    function actionZh(action) { return ({ ADD: "买入复核", HOLD: "持有", TRIM_REVIEW: "减仓复核", EXIT_REVIEW: "退出复核", RESEARCH_ONLY: "仅研究", DATA_INSUFFICIENT: "数据不足" })[action] || action || "—"; }
+    function actionColor(action) { return action === "ADD" ? COLORS.add : action === "HOLD" ? COLORS.hold : action === "RESEARCH_ONLY" ? COLORS.muted : COLORS.sell; }
+    function circleZh(circle) { return circle === "CORE" ? "Core Circle" : circle === "LEARNING" ? "Learning Circle" : circle || "—"; }
+    function initChart(id, option) {
+      requestAnimationFrame(function () {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (charts[id]) charts[id].dispose();
+        charts[id] = echarts.init(el);
+        charts[id].setOption(option, true);
+      });
+    }
+    function chartCard(title, id, span, heightClass, timestamp, aria) {
+      return '<section class="widget-card ' + span + '"><div class="widget-title"><span class="widget-title-text">' + esc(title) + '</span>' + (timestamp ? '<span class="widget-timestamp">' + esc(timestamp) + '</span>' : "") + '</div><div class="chart-body chart-dotted-background"><div id="' + esc(id) + '" class="chart-container chart-shell ' + esc(heightClass || "") + '" role="img" aria-label="' + esc(aria || title) + '"></div><div class="alva-watermark"><img src="https://alva-ai-static.b-cdn.net/icons/alva-watermark.svg" alt="Alva" /></div></div></section>';
+    }
+    function selector(id, rows, label) {
+      return '<label class="select-wrap" for="' + id + '"><span class="select-label">' + esc(label) + '</span><select class="symbol-select" id="' + id + '">' + rows.map(function (row) { return '<option value="' + esc(row.symbol) + '">' + esc(row.symbol) + ' · ' + esc(circleZh(row.circle)) + '</option>'; }).join("") + '</select></label>';
+    }
+    function valuationScatterOption(rows) {
+      const points = rows.filter(function (r) { return finite(r.current_price) && finite(r.base_value) && Number(r.base_value) !== 0; }).map(function (r) {
+        return { name: r.symbol, value: [((Number(r.current_price) / Number(r.base_value)) - 1) * 100, Number(r.confidence || 0) * 100, Number(r.target_weight || 0) * 100], symbol: r.circle === "LEARNING" ? "diamond" : "circle", itemStyle: r.circle === "LEARNING" ? { color: "rgba(255,255,255,0.9)", borderColor: COLORS.muted, borderWidth: 1.5 } : { color: actionColor(r.action) }, row: r };
+      });
+      const sample = rows[0] || {};
+      const buyX = -Number(sample.margin_of_safety || 0) * 100;
+      return {
+        animationDuration: 180,
+        grid: { top: 28, right: 26, bottom: 38, left: 20, containLabel: true },
+        tooltip: { trigger: "item", formatter: function (p) { const r = p.data.row; return '<b>' + esc(r.symbol) + '</b><br>价格 / Base：' + pctPoint(p.value[0]) + '<br>当前价：' + money(r.current_price) + '<br>动作：' + esc(actionZh(r.action)); } },
+        xAxis: { type: "value", name: "相对 Base", nameLocation: "middle", nameGap: 28, nameTextStyle: AXIS_LABEL, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: function (v) { return (v > 0 ? "+" : "") + v + "%"; } }, splitLine: { show: false } },
+        yAxis: { type: "value", min: 0, max: 100, name: "置信度", nameTextStyle: AXIS_LABEL, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: "{value}%" }, splitLine: { show: false } },
+        series: [{ type: "scatter", data: points, symbolSize: function (v) { return Math.max(13, 13 + Number(v[2] || 0)); }, label: { show: true, formatter: "{b}", position: "top", color: "rgba(0,0,0,0.7)", fontSize: 11 }, labelLayout: { hideOverlap: true, moveOverlap: "shiftY" }, emphasis: { scale: 1.15 }, markArea: { silent: true, itemStyle: { color: "rgba(64,165,68,0.08)" }, data: [[{ xAxis: -200 }, { xAxis: buyX }]] }, markLine: { silent: true, symbol: "none", lineStyle: { color: "rgba(0,0,0,0.3)", type: [3, 2], width: 1 }, label: { show: false }, data: [{ xAxis: 0 }] } }]
+      };
+    }
+    function earningsOption(rows) {
+      const now = Date.now();
+      const data = rows.filter(function (r) { return r.earnings_date && !Number.isNaN(Date.parse(r.earnings_date)); }).map(function (r) { return { name: r.symbol, value: [Math.ceil((Date.parse(r.earnings_date) - now) / 86400000), r.symbol], date: r.earnings_date, itemStyle: { color: actionColor(r.action) } }; }).sort(function (a, b) { return a.value[0] - b.value[0]; });
+      return {
+        animationDuration: 180,
+        grid: { top: 18, right: 18, bottom: 38, left: 10, containLabel: true },
+        tooltip: { trigger: "item", formatter: function (p) { return '<b>' + esc(p.name) + '</b><br>' + esc(p.data.date) + '<br>距离财报 ' + number(p.value[0], 0) + ' 天'; } },
+        xAxis: { type: "value", min: 0, max: function (range) { return Math.max(1, Math.ceil(range.max * 1.18)); }, name: "距离财报（天）", nameLocation: "middle", nameGap: 28, nameTextStyle: AXIS_LABEL, axisLine: { show: false }, axisTick: { show: false }, axisLabel: AXIS_LABEL, splitLine: { show: false } },
+        yAxis: { type: "category", data: data.map(function (d) { return d.name; }), axisLine: { show: false }, axisTick: { show: false }, axisLabel: AXIS_LABEL, splitLine: { show: false } },
+        series: [{ type: "scatter", data: data, symbolSize: 14, label: { show: true, position: "right", formatter: function (p) { return number(p.value[0], 0) + "天"; }, color: "rgba(0,0,0,0.7)", fontSize: 10 } }]
+      };
+    }
+    function rangeLaneOption(rows) {
+      const core = rows.filter(function (r) { return r.circle === "CORE" && finite(r.base_value) && Number(r.base_value) !== 0; });
+      const lanes = core.map(function (r, i) { return [Number(r.bear_value) / Number(r.base_value) * 100, Number(r.bull_value) / Number(r.base_value) * 100, i]; });
+      const current = core.map(function (r, i) { return { name: r.symbol, value: [Number(r.current_price) / Number(r.base_value) * 100, i], row: r, itemStyle: { color: actionColor(r.action) } }; });
+      return {
+        animationDuration: 180,
+        grid: { top: 20, right: 38, bottom: 42, left: 16, containLabel: true },
+        tooltip: { trigger: "item", formatter: function (p) { if (!p.data.row) return "Bear–Bull 估值带"; const r = p.data.row; return '<b>' + esc(r.symbol) + '</b><br>当前 / Base：' + pctPoint(p.value[0]) + '<br>Bear：' + money(r.bear_value) + '<br>Base：' + money(r.base_value) + '<br>Bull：' + money(r.bull_value); } },
+        xAxis: { type: "value", max: function (range) { return Math.ceil(range.max * 1.08); }, name: "Base = 100%", nameLocation: "middle", nameGap: 30, nameTextStyle: AXIS_LABEL, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: "{value}%" }, splitLine: { show: false } },
+        yAxis: { type: "category", data: core.map(function (r) { return r.symbol; }), axisLine: { show: false }, axisTick: { show: false }, axisLabel: AXIS_LABEL, splitLine: { show: false } },
+        series: [{ type: "custom", silent: true, data: lanes, renderItem: function (params, api) { const start = api.coord([api.value(0), api.value(2)]); const end = api.coord([api.value(1), api.value(2)]); return { type: "rect", shape: { x: start[0], y: start[1] - 7, width: Math.max(1, end[0] - start[0]), height: 14 }, style: { fill: "rgba(61,139,209,0.13)" } }; } }, { type: "scatter", data: current, symbolSize: 14, label: { show: true, position: "right", formatter: function (p) { return actionZh(p.data.row.action); }, color: "rgba(0,0,0,0.7)", fontSize: 10 } }]
+      };
+    }
+    function renderToday() {
+      const rows = model.decisions;
+      const core = rows.filter(function (r) { return r.circle === "CORE"; });
+      const adds = core.filter(function (r) { return r.action === "ADD"; }).length;
+      const holds = core.filter(function (r) { return r.action === "HOLD"; }).length;
+      const sells = core.filter(function (r) { return r.action === "TRIM_REVIEW" || r.action === "EXIT_REVIEW"; }).length;
+      const asOf = rows.map(function (r) { return r.as_of; }).filter(Boolean).sort().slice(-1)[0] || "";
+      document.getElementById("today-content").innerHTML = '<div class="dashboard-grid"><div class="pulse-strip span-8"><div class="pulse-item"><div class="pulse-label">买入复核</div><div class="pulse-value">' + adds + '</div><div class="pulse-note">进入安全边际</div></div><div class="pulse-item"><div class="pulse-label">持有</div><div class="pulse-value">' + holds + '</div><div class="pulse-note">等待新证据</div></div><div class="pulse-item"><div class="pulse-label">卖出复核</div><div class="pulse-value">' + sells + '</div><div class="pulse-note">减仓或退出</div></div><div class="pulse-item"><div class="pulse-label">最新更新</div><div class="pulse-value small">' + esc(asOf ? new Date(asOf).toLocaleString() : "—") + '</div><div class="pulse-note">无变化时保持安静</div></div></div>' + chartCard("估值位置图", "today-scatter", "span-5", "tall", "越靠左越便宜", "标的估值折价与分析置信度散点图") + chartCard("下一次财报", "earnings-scatter", "span-3", "tall", "事件风险", "距离下一次财报日期散点图") + '<div class="chart-caption span-8"><span class="legend-key"><i class="legend-swatch add"></i>买入复核</span><span class="legend-key"><i class="legend-swatch hold"></i>持有</span><span class="legend-key"><i class="legend-swatch sell"></i>减仓 / 退出</span><span class="legend-key"><i class="legend-swatch learn"></i>Learning Circle</span></div>' + chartCard("Core Circle · 当前价格在估值带中的位置", "range-lanes", "span-8", "tall", "Base = 100%", "Core Circle 当前价格与 Bear Bull 估值带") + '</div>';
+      initChart("today-scatter", valuationScatterOption(rows));
+      initChart("earnings-scatter", earningsOption(rows));
+      initChart("range-lanes", rangeLaneOption(rows));
+    }
+    function scenarioLineOption(row) {
+      return {
+        animationDuration: 180,
+        grid: { top: 30, right: 24, bottom: 34, left: 18, containLabel: true },
+        tooltip: { trigger: "axis", formatter: function (params) { return '<b>' + esc(params[0].axisValue) + '</b><br>' + params.map(function (p) { return esc(p.seriesName) + '：' + money(p.value); }).join('<br>'); } },
+        xAxis: { type: "category", data: ["Bear", "Base", "Bull"], boundaryGap: false, axisLine: { show: false }, axisTick: { show: false }, axisLabel: AXIS_LABEL, splitLine: { show: false } },
+        yAxis: { type: "value", scale: true, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: function (v) { return "$" + number(v, 0); } }, splitLine: { show: false } },
+        series: [{ name: "内在价值", type: "line", data: [row.bear_value, row.base_value, row.bull_value], symbolSize: 9, lineStyle: { width: 2, color: COLORS.base }, itemStyle: { color: COLORS.base }, areaStyle: { color: "rgba(95,117,201,0.08)" } }, { name: "当前价格", type: "line", data: [row.current_price, row.current_price, row.current_price], symbol: "none", lineStyle: { width: 2, color: COLORS.current }, itemStyle: { color: COLORS.current } }]
+      };
+    }
+    function triggerDistanceOption(row) {
+      const price = Number(row.current_price || 0);
+      const data = [{ name: "买入线", threshold: row.buy_zone_high }, { name: "减仓线", threshold: row.trim_zone }, { name: "退出线", threshold: row.exit_review_zone }].map(function (item) { return { name: item.name, value: price && finite(item.threshold) ? (Number(item.threshold) / price - 1) * 100 : null, threshold: item.threshold, itemStyle: { color: item.name === "买入线" ? COLORS.add : COLORS.sell } }; });
+      return {
+        animationDuration: 180,
+        grid: { top: 22, right: 28, bottom: 34, left: 12, containLabel: true },
+        tooltip: { trigger: "item", formatter: function (p) { return '<b>' + esc(p.name) + '</b><br>触发价格：' + money(p.data.threshold) + '<br>距当前价：' + pctPoint(p.value); } },
+        xAxis: { type: "value", max: function (range) { return Math.max(10, Math.ceil(range.max * 1.1)); }, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: function (v) { return (v > 0 ? "+" : "") + v + "%"; } }, splitLine: { show: false } },
+        yAxis: { type: "category", data: data.map(function (d) { return d.name; }), axisLine: { show: false }, axisTick: { show: false }, axisLabel: AXIS_LABEL, splitLine: { show: false } },
+        series: [{ type: "bar", data: data, barWidth: 16, label: { show: true, position: "right", formatter: function (p) { return pctPoint(p.value); }, color: "rgba(0,0,0,0.7)", fontSize: 10 }, markLine: { silent: true, symbol: "none", data: [{ xAxis: 0 }], lineStyle: { color: "rgba(0,0,0,0.3)", type: [3, 2], width: 1 }, label: { show: false } } }]
+      };
+    }
+    function renderValuation() {
+      const rows = model.decisions;
+      document.getElementById("valuation-content").innerHTML = '<div class="dashboard-grid"><div class="control-row span-8"><div><div class="control-title">一眼看清价格与价值</div><div class="control-note">折线显示三种估值情景；条形图显示距离下一条交易复核线还有多远。</div></div>' + selector("valuation-symbol", rows, "选择标的") + '</div>' + chartCard("估值情景", "scenario-line", "span-5", "tall", "价值区间 vs 当前价", "Bear Base Bull 估值与当前价格折线图") + chartCard("距离触发线", "trigger-bars", "span-3", "tall", "0% = 当前价格", "当前价格距离买入减仓退出触发线") + '<div id="valuation-stats" class="compact-stats span-8"></div></div>';
+      const select = document.getElementById("valuation-symbol");
+      select.addEventListener("change", function () { updateValuation(select.value); });
+      updateValuation(select.value);
+    }
+    function updateValuation(symbol) {
+      const row = model.decisions.find(function (r) { return r.symbol === symbol; });
+      if (!row) return;
+      initChart("scenario-line", scenarioLineOption(row));
+      initChart("trigger-bars", triggerDistanceOption(row));
+      document.getElementById("valuation-stats").innerHTML = '<div class="compact-stat"><div class="compact-stat-label">当前价格</div><div class="compact-stat-value">' + money(row.current_price) + '</div></div><div class="compact-stat"><div class="compact-stat-label">Base 价值</div><div class="compact-stat-value">' + money(row.base_value) + '</div></div><div class="compact-stat"><div class="compact-stat-label">安全边际</div><div class="compact-stat-value">' + pct(row.margin_of_safety) + '</div></div><div class="compact-stat"><div class="compact-stat-label">今日动作</div><div class="compact-stat-value">' + esc(actionZh(row.action)) + '</div></div>';
+    }
+    function reportFor(symbol) {
+      const roleRow = model.roleRows.find(function (r) { return r.symbol === symbol; }) || {};
+      const decision = model.decisions.find(function (r) { return r.symbol === symbol; }) || {};
+      const reports = parseJson(roleRow.reports, parseJson(decision.role_reports, []));
+      return { row: roleRow, reports: Array.isArray(reports) ? reports : [] };
+    }
+    function roleName(role) { return ({ BUSINESS: "商业", FUNDAMENTAL: "基本面", VALUATION: "估值", INDUSTRY_CYCLE: "行业", THESIS: "逻辑", BULL: "看多", BEAR: "看空" })[role] || role || "角色"; }
+    function roleShort(role) { return ({ BUSINESS: "业务边界已覆盖", FUNDAMENTAL: "盈利预期已覆盖", VALUATION: "估值区间可用", INDUSTRY_CYCLE: "行业归属已核对", THESIS: "逻辑等待新证据", BULL: "上行情景不添加虚构催化", BEAR: "下行情景关注估值与数据缺口" })[role] || "等待角色判断"; }
+    function radarOption(reports) {
+      const usable = reports.filter(function (r) { return Array.isArray(r.claims) && r.claims[0] && finite(r.claims[0].confidence); });
+      return {
+        animationDuration: 180,
+        tooltip: { trigger: "item", formatter: function (p) { return p.name + '<br>' + p.value.map(function (v, i) { return esc(roleName(usable[i].role)) + '：' + pctPoint(v); }).join('<br>'); } },
+        radar: { center: ["50%", "51%"], radius: "64%", splitNumber: 4, indicator: usable.map(function (r) { return { name: roleName(r.role), max: 100 }; }), axisName: { color: "rgba(0,0,0,0.7)", fontSize: 11, fontFamily: FONT }, splitLine: { lineStyle: { color: "rgba(0,0,0,0.08)" } }, splitArea: { areaStyle: { color: ["rgba(61,139,209,0.01)", "rgba(61,139,209,0.04)"] } }, axisLine: { lineStyle: { color: "rgba(0,0,0,0.12)" } } },
+        series: [{ type: "radar", data: [{ name: "角色置信度", value: usable.map(function (r) { return Number(r.claims[0].confidence) * 100; }), lineStyle: { color: COLORS.base, width: 2 }, itemStyle: { color: COLORS.base }, areaStyle: { color: "rgba(95,117,201,0.12)" }, symbolSize: 6 }] }]
+      };
+    }
+    function renderRisk() {
+      const rows = model.decisions;
+      document.getElementById("risk-content").innerHTML = '<div class="dashboard-grid"><div class="control-row span-8"><div><div class="control-title">角色意见是否一致</div><div class="control-note">图形越饱满，代表各角色的证据覆盖和判断置信度越高。</div></div>' + selector("risk-symbol", rows, "选择标的") + '</div><div id="risk-dynamic" class="span-8"></div></div>';
+      const select = document.getElementById("risk-symbol");
+      select.addEventListener("change", function () { updateRisk(select.value); });
+      updateRisk(select.value);
+    }
+    function updateRisk(symbol) {
+      const decision = model.decisions.find(function (r) { return r.symbol === symbol; });
+      const evidence = model.evidence.find(function (r) { return r.symbol === symbol; }) || {};
+      const bundle = reportFor(symbol);
+      if (!decision) return;
+      const bull = bundle.reports.find(function (r) { return r.role === "BULL"; });
+      const bear = bundle.reports.find(function (r) { return r.role === "BEAR"; });
+      const mode = bundle.row.cross_validation_mode || "INDEPENDENT_RULE_BASED_PASSES";
+      const conflicts = bundle.row.conflicts || "没有记录到高重要性冲突";
+      const missing = evidence.missing_evidence || "没有关键证据缺口";
+      document.getElementById("risk-dynamic").innerHTML = '<div class="dashboard-grid"><div class="status-row span-8"><span class="status-chip">逻辑 ' + esc(decision.thesis_status || "—") + '</span><span class="status-chip">风险 ' + esc(decision.risk_status || "—") + '</span><span class="status-chip">总置信度 ' + pct(decision.confidence) + '</span></div>' + chartCard(symbol + " · 角色置信度", "role-radar", "span-5", "tall", "共享证据包", "多角色分析置信度雷达图") + '<section class="widget-card span-3"><div class="widget-title"><span class="widget-title-text">对抗结论</span><span class="widget-timestamp">规则化检查</span></div><div class="case-stack"><div class="case-row"><div class="case-label"><span>看多</span><span>' + esc(bull ? bull.verdict : "不适用") + '</span></div><div class="case-copy">' + esc(roleShort("BULL")) + '</div></div><div class="case-row"><div class="case-label"><span>看空</span><span>' + esc(bear ? bear.verdict : "不适用") + '</span></div><div class="case-copy">' + esc(roleShort("BEAR")) + '</div></div><div class="case-row"><div class="case-label"><span>证据缺口</span></div><div class="case-copy">' + esc(missing) + '</div></div></div></section><details class="evidence-details span-8"><summary>查看证据与交叉验证边界</summary><div class="evidence-grid"><div class="evidence-key">当前模式</div><div class="evidence-value">' + esc(mode) + '</div><div class="evidence-key">待处理冲突</div><div class="evidence-value">' + esc(conflicts) + '</div><div class="evidence-key">证据编号</div><div class="evidence-value">' + esc(decision.evidence_ids || "—") + '</div><div class="evidence-key">实现边界</div><div class="evidence-value">这是共享证据包上的规则化独立角色检查，不是开放式 Agent 辩论。高重要性冲突应阻止加仓并进入人工复核。</div></div></details></div>';
+      initChart("role-radar", radarOption(bundle.reports));
+    }
+    function renderMethod() {
+      const sample = model.decisions[0] || {};
+      document.getElementById("method-content").innerHTML = '<div class="dashboard-grid"><div class="control-row span-8"><div><div class="control-title">从能力圈到仓位动作</div><div class="control-note">每天更新证据，只有估值、逻辑或风险发生实质变化，动作才改变。</div></div></div><div class="method-flow span-8"><div class="method-step"><div class="method-index">01</div><div class="method-name">能力圈</div><div class="method-copy">不懂的公司只研究</div></div><div class="method-step"><div class="method-index">02</div><div class="method-name">共享证据</div><div class="method-copy">价格、盈利与事件同一时点</div></div><div class="method-step"><div class="method-index">03</div><div class="method-name">角色检查</div><div class="method-copy">商业、基本面、估值、行业、逻辑</div></div><div class="method-step"><div class="method-index">04</div><div class="method-name">Bull / Bear</div><div class="method-copy">主动寻找反例和下行风险</div></div><div class="method-step"><div class="method-index">05</div><div class="method-name">安全边际</div><div class="method-copy">最低 ' + pct(sample.margin_of_safety) + '</div></div><div class="method-step"><div class="method-index">06</div><div class="method-name">分批仓位</div><div class="method-copy">最多 ' + esc(sample.tranche_total || "—") + ' 批，每批重检</div></div><div class="method-step"><div class="method-index">07</div><div class="method-name">低频行动</div><div class="method-copy">买入、持有、减仓或退出复核</div></div></div><div class="boundary-line span-8"><strong>边界：</strong><span>观察清单模型，不连接真实持仓，不自动下单，不保证收益。</span></div></div>';
+    }
+    function activateTab(name, updateHash, focus) {
+      const tab = document.querySelector('[role="tab"][data-tab="' + name + '"]');
+      if (!tab) return;
+      document.querySelectorAll('[role="tab"][data-tab]').forEach(function (item) { const active = item === tab; item.classList.toggle("active", active); item.setAttribute("aria-selected", active ? "true" : "false"); item.tabIndex = active ? 0 : -1; });
+      document.querySelectorAll('[data-tab-panel][data-tab-group="portfolio"]').forEach(function (panel) { panel.hidden = panel.dataset.tabPanel !== name; });
+      if (focus) tab.focus();
+      if (updateHash && window.location.hash.slice(1) !== HASH_BY_TAB[name]) history.replaceState(null, "", "#" + HASH_BY_TAB[name]);
+      const activePanel = document.querySelector('[data-tab-panel="' + name + '"]');
+      requestAnimationFrame(function () {
+        if (activePanel) activePanel.querySelectorAll("[_echarts_instance_]").forEach(function (el) { const inst = echarts.getInstanceByDom(el); if (inst) inst.resize(); });
+      });
+    }
+    function setupTabs() {
+      const tablist = document.querySelector('[role="tablist"]');
+      tablist.addEventListener("click", function (event) { const tab = event.target.closest('[role="tab"]'); if (tab) activateTab(tab.dataset.tab, true, false); });
+      tablist.addEventListener("keydown", function (event) {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        const tabs = Array.from(tablist.querySelectorAll('[role="tab"]')); const current = tabs.indexOf(document.activeElement); let next = current;
+        if (event.key === "ArrowRight") next = (current + 1) % tabs.length; if (event.key === "ArrowLeft") next = (current - 1 + tabs.length) % tabs.length; if (event.key === "Home") next = 0; if (event.key === "End") next = tabs.length - 1;
+        event.preventDefault(); activateTab(tabs[next].dataset.tab, true, true);
+      });
+      window.addEventListener("hashchange", function () { activateTab(TAB_BY_HASH[window.location.hash.slice(1)] || "today", false, false); });
+      activateTab(TAB_BY_HASH[window.location.hash.slice(1)] || "today", false, false);
+    }
+    function showError(error) {
+      document.querySelectorAll(".tab-panel > div").forEach(function (container) { container.innerHTML = '<div class="error">暂时无法读取最新分析。请稍后刷新；私有 Playbook 需要有效的 Alva 查看权限。</div>'; });
+      console.error(error);
+    }
+    Promise.all([readAlfsJson(DECISION_PATH), readAlfsJson(EVIDENCE_PATH)]).then(function (values) {
+      model.decisions = latestBySymbol(unwrap(values[0])); model.evidence = latestBySymbol(unwrap(values[1]));
+      if (!model.decisions.length) throw new Error("No current decision records returned");
+      renderToday(); renderValuation(); renderRisk(); renderMethod(); setupTabs();
+      readAlfsJson(ROLE_REPORTS_PATH).then(function (value) { model.roleRows = latestBySymbol(unwrap(value)); const riskSelect = document.getElementById("risk-symbol"); if (riskSelect) updateRisk(riskSelect.value); }).catch(function (error) { console.warn("Role-report details are temporarily unavailable; embedded reports remain visible.", error); });
+      window.addEventListener("resize", function () { requestAnimationFrame(function () { Object.keys(charts).forEach(function (id) { if (charts[id]) charts[id].resize(); }); }); });
+    }).catch(showError);
+  </script>
+</body>
+</html>
