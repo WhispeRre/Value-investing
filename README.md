@@ -7,7 +7,7 @@
 ## 当前产物
 
 - `skill/`：`value-investing-portfolio-decisions` Skill。定义能力圈、证据包、多角色交叉验证、Bull/Bear、风险闸门、分批仓位和决策状态；Alva 平台生命周期由 Alva Skill 负责。
-- `one-pager/`：中文和英文独立版本的产品说明，描述投资者问题、方法和当前实现边界。
+- `one-pager/`：独立的中文和英文 One Pager，分别说明 Alva 产品思考、Skill 设计和价值投资作用。
 - `playbook/`：Automation 脚本、Playbook HTML 和数据说明。
 - `validation/`：Skill 测试提示和验证记录。
 
