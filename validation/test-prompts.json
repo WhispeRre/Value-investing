@@ -13,5 +13,10 @@
     "id": 3,
     "prompt": "Run today's review. Prices, filings, estimates, thesis evidence, and portfolio weights are unchanged from yesterday.",
     "expected": "Use QUIET_REFRESH, preserve the prior decision, emit NO_ACTION, avoid rerunning opinion agents, and suppress a repeated alert."
+  },
+  {
+    "id": 4,
+    "prompt": "Help me build a daily workflow to find good stocks and tell me what to buy.",
+    "expected": "Run the Goal Interrogation Gate first; ask about the decision objective, scope, horizon, risk/liquidity limits, evidence, success/failure criteria, action authority, and output; do not collect data or recommend a trade until a Goal Brief is confirmed."
   }
 ]

@@ -5,8 +5,8 @@ description: Create a daily value-investing portfolio decision workflow constrai
 
 # Value Investing Portfolio Decisions
 
-Turn a confirmed mandate into a daily decision-support workflow. Never promise
-profitable or correct trades.
+Turn a clarified and confirmed mandate into a daily decision-support workflow.
+Never promise profitable or correct trades.
 
 ## Boundary With The Alva Skill
 
@@ -29,49 +29,70 @@ Alva skill for implementation.
   transition, hard-limit breach, or material unresolved conflict. Run the full
   cross-validation and risk sequence before Portfolio Manager adjudication.
 
+## Goal Interrogation Gate
+
+Before constructing content, analysis, hosted workflows, alerts, or trade
+actions, run the goal-interrogation process in
+[goal-interrogation.md](references/goal-interrogation.md). Treat the user's
+initial request as a hypothesis, not a complete specification. Ask focused
+questions, challenge vague terms and contradictions, and make the user choose
+between materially different objectives or risk constraints. Separate the
+desired outcome from the proposed method.
+
+Do not proceed to mandate, evidence collection, role calls, or implementation
+while a decision-critical question is open. Summarize the resulting goal brief
+and ask for an explicit confirmation. Record unresolved questions and the
+reason for any conservative default. For a routine refresh with an unchanged,
+already-confirmed goal brief and mandate, perform only a lightweight drift
+check; re-open the full gate when the user changes scope, policy, horizon,
+success criteria, or requested action.
+
 ## Workflow
 
-1. **Choose the mode.** Identify existing holdings, a fixed watchlist, or
+1. **Interrogate the goal.** Complete the Goal Interrogation Gate before doing
+   substantive work. For an unchanged routine refresh, run the lightweight
+   drift check.
+2. **Choose the mode.** Identify existing holdings, a fixed watchlist, or
    discovery only inside user-approved industries.
-2. **Build the mandate.** Read [onboarding.md](references/onboarding.md). Record
+3. **Build the mandate.** Read [onboarding.md](references/onboarding.md). Record
    markets, core and learning circles, exclusions, horizon, risk limits,
    valuation policy, tranche policy, and notification cadence.
-3. **CHECKPOINT - confirm scope.** Show conservative defaults and obtain user
+4. **CHECKPOINT - confirm scope.** Show the confirmed goal brief, conservative defaults, and obtain user
    confirmation before creating actions, hosted workflows, or alerts.
-4. **Freeze the universe.** Apply
+5. **Freeze the universe.** Apply
    [circle-of-competence.md](references/circle-of-competence.md). Never expand
    the candidate universe silently.
-5. **Build one evidence packet.** Give every required role the same timestamped
+6. **Build one evidence packet.** Give every required role the same timestamped
    facts, computed values, policy, prior decision, and missing-data map. Keep
    role opinions out of the packet. Follow
    [agent-contracts.md](references/agent-contracts.md).
-6. **Run blind specialist passes.** Run Business, Fundamental, Valuation,
+7. **Run blind specialist passes.** Run Business, Fundamental, Valuation,
    Industry/Cycle, and Thesis agents independently. Do not show a specialist
    another role's conclusion before its first response.
-7. **Select the decision mode.** Compare the evidence packet and specialist
+8. **Select the decision mode.** Compare the evidence packet and specialist
    claims with bounded prior state. Use `ACTION_REVIEW` whenever a new
    `ADD`, `TRIM`, or `EXIT` could result.
-8. **Cross-examine action candidates.** In `ACTION_REVIEW`, run separate Bull
+9. **Cross-examine action candidates.** In `ACTION_REVIEW`, run separate Bull
    and Bear invocations. Each must cite claim and evidence IDs, challenge the
    opponent's highest-impact claims, and answer the opponent once. Allow one
    additional round only when a material conflict remains unresolved.
-9. **Adjudicate research.** The Research Manager records supported conclusions,
+10. **Adjudicate research.** The Research Manager records supported conclusions,
    rejected claims, unresolved conflicts, missing evidence, and a provisional
    state. Do not use majority voting.
-10. **Run independent risk reviews.** Thesis Risk checks permanent impairment;
+11. **Run independent risk reviews.** Thesis Risk checks permanent impairment;
     Portfolio Risk checks concentration, correlation, liquidity, and mandate
     limits; Position computes target weight and tranche capacity. Each reviews
     the provisional plan independently before seeing the others' conclusions.
-11. **Make the portfolio decision.** The Portfolio Manager applies the mandate,
+12. **Make the portfolio decision.** The Portfolio Manager applies the mandate,
     hard vetoes, evidence quality, thesis status, valuation, unresolved
     conflicts, and position capacity. Apply
     [decision-state-machine.md](references/decision-state-machine.md),
     [position-sizing.md](references/position-sizing.md), and
     [exit-policy.md](references/exit-policy.md).
-12. **Run daily, notify selectively.** Persist the evidence, role reports,
+13. **Run daily, notify selectively.** Persist the evidence, role reports,
     challenges, adjudication trace, and final decision. Alert only for a new
     state, action, material valuation/thesis/risk change, or policy reminder.
-13. **Validate.** Apply
+14. **Validate.** Apply
     [decision-evaluation.md](references/decision-evaluation.md). Use Altra
     through the Alva skill for any backtest or portfolio simulation.
 
@@ -122,6 +143,7 @@ Return one structured decision per in-scope security:
 ```json
 {
   "symbol": "TICKER",
+  "goal_status": "CONFIRMED",
   "state": "ACCUMULATE",
   "action": "ADD",
   "current_weight": 0.04,

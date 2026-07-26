@@ -11,7 +11,8 @@ Validation date: 2026-07-25
 
 ## Multi-Agent Decision Design
 
-- Three scenario prompts cover a conflicted add decision, a portfolio-limit trim, and an unchanged quiet refresh.
+- Four scenario prompts cover goal clarification, a conflicted add decision, a portfolio-limit trim, and an unchanged quiet refresh.
+- New requests pass through a Goal Interrogation Gate that records a confirmed, versioned Goal Brief before analysis, alerts, or actions.
 - The contracts separate facts, calculations, assumptions, role inference, challenges, risk vetoes, and manager decisions.
 - Action review requires independent specialist passes, Bull/Bear cross-examination, research adjudication, and independent thesis, portfolio, and position reviews.
 - A confirmed thesis break or hard portfolio breach can veto an addition; unresolved critical conflicts cannot be converted into a forced action.
