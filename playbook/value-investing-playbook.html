@@ -58,6 +58,27 @@
     .case-row { padding: var(--spacing-m); background: var(--grey-g01); border-radius: var(--radius-ct-s); }
     .case-label { display: flex; align-items: center; justify-content: space-between; color: var(--text-n9); font-size: 14px; line-height: 22px; }
     .case-copy { margin-top: var(--spacing-xxs); color: var(--text-n7); font-size: 12px; line-height: 20px; }
+    .risk-callout { padding: var(--spacing-l); background: var(--grey-g01); border-radius: var(--radius-ct-s); }
+    .risk-callout-label { color: var(--text-n5); font-size: 11px; line-height: 18px; }
+    .risk-callout-value { margin-top: var(--spacing-xxs); color: var(--text-n9); font-size: 16px; line-height: 24px; }
+    .risk-callout-copy { margin-top: var(--spacing-xs); color: var(--text-n7); font-size: 12px; line-height: 20px; }
+    .confidence-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--grey-g01); border-radius: var(--radius-ct-s); }
+    .confidence-stat { padding: var(--spacing-m); min-width: 0; }
+    .confidence-stat + .confidence-stat { border-left: 0.5px solid var(--line-l12); }
+    .confidence-stat-label { color: var(--text-n5); font-size: 11px; line-height: 18px; }
+    .confidence-stat-value { margin-top: var(--spacing-xxs); color: var(--text-n9); font-size: 18px; line-height: 26px; }
+    .confidence-formula { margin-top: var(--spacing-s); color: var(--text-n5); font-size: 11px; line-height: 18px; }
+    .role-ledger { display: grid; gap: var(--spacing-xs); }
+    .role-entry { background: var(--grey-g01); border-radius: var(--radius-ct-s); }
+    .role-entry summary { display: flex; align-items: center; gap: var(--spacing-s); cursor: pointer; list-style: none; padding: var(--spacing-m); color: var(--text-n9); font-size: 13px; line-height: 20px; }
+    .role-entry summary::-webkit-details-marker { display: none; }
+    .role-entry summary::before { content: "+"; color: var(--text-n5); width: 14px; }
+    .role-entry[open] summary::before { content: "−"; }
+    .role-score { min-width: 54px; font-variant-numeric: tabular-nums; }
+    .role-confidence { margin-left: auto; color: var(--text-n5); font-size: 11px; }
+    .role-entry-body { padding: 0 var(--spacing-m) var(--spacing-m) calc(var(--spacing-m) + 14px + var(--spacing-s)); color: var(--text-n7); font-size: 12px; line-height: 20px; }
+    .role-meta { display: flex; gap: var(--spacing-s); flex-wrap: wrap; margin-top: var(--spacing-xs); color: var(--text-n5); font-size: 11px; line-height: 18px; }
+    .role-evidence { margin-top: var(--spacing-xs); color: var(--text-n5); font-size: 11px; line-height: 18px; overflow-wrap: anywhere; }
     .evidence-details { border-top: 0.5px solid var(--line-l12); border-bottom: 0.5px solid var(--line-l12); }
     .evidence-details summary { cursor: pointer; padding: var(--spacing-m) 0; color: var(--text-n9); font-size: 14px; line-height: 22px; }
     .evidence-grid { display: grid; grid-template-columns: minmax(130px, 0.7fr) minmax(0, 2fr); padding-bottom: var(--spacing-m); }
@@ -95,6 +116,10 @@
       .select-wrap { width: 100%; }
       .evidence-grid { grid-template-columns: 1fr; }
       .evidence-key { padding-bottom: 0; }
+      .confidence-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .confidence-stat:nth-child(3) { border-left: 0; border-top: 0.5px solid var(--line-l12); }
+      .confidence-stat:nth-child(n+4) { border-top: 0.5px solid var(--line-l12); }
+      .confidence-stat:nth-child(5) { grid-column: span 2; }
     }
     @media (prefers-reduced-motion: reduce) { .tab-button { transition: none; } }
   </style>
@@ -274,20 +299,31 @@
       const reports = parseJson(roleRow.reports, parseJson(decision.role_reports, []));
       return { row: roleRow, reports: Array.isArray(reports) ? reports : [] };
     }
-    function roleName(role) { return ({ BUSINESS: "商业", FUNDAMENTAL: "基本面", VALUATION: "估值", INDUSTRY_CYCLE: "行业", THESIS: "逻辑", BULL: "看多", BEAR: "看空" })[role] || role || "角色"; }
-    function roleShort(role) { return ({ BUSINESS: "业务边界已覆盖", FUNDAMENTAL: "盈利预期已覆盖", VALUATION: "估值区间可用", INDUSTRY_CYCLE: "行业归属已核对", THESIS: "逻辑等待新证据", BULL: "上行情景不添加虚构催化", BEAR: "下行情景关注估值与数据缺口" })[role] || "等待角色判断"; }
+    function roleName(role) { return ({ BUSINESS: "商业质量", FUNDAMENTAL: "基本面", VALUATION: "估值", INDUSTRY_CYCLE: "行业周期", THESIS: "投资逻辑", BULL: "看多", BEAR: "看空", THESIS_RISK: "逻辑风险", PORTFOLIO_RISK: "组合风险", POSITION: "仓位" })[role] || role || "角色"; }
+    function roleTone(score) { return Number(score) >= 30 ? COLORS.add : Number(score) <= -30 ? COLORS.sell : COLORS.base; }
     function radarOption(reports) {
-      const usable = reports.filter(function (r) { return Array.isArray(r.claims) && r.claims[0] && finite(r.claims[0].confidence); });
+      const usable = reports.filter(function (r) { return r.role !== "POSITION" && finite(r.confidence); });
       return {
         animationDuration: 180,
-        tooltip: { trigger: "item", formatter: function (p) { return p.name + '<br>' + p.value.map(function (v, i) { return esc(roleName(usable[i].role)) + '：' + pctPoint(v); }).join('<br>'); } },
+        tooltip: { trigger: "item", formatter: function (p) { return '<b>证据置信度</b><br>' + p.value.map(function (v, i) { return esc(roleName(usable[i].role)) + '：' + pctPoint(v); }).join('<br>'); } },
         radar: { center: ["50%", "51%"], radius: "64%", splitNumber: 4, indicator: usable.map(function (r) { return { name: roleName(r.role), max: 100 }; }), axisName: { color: "rgba(0,0,0,0.7)", fontSize: 11, fontFamily: FONT }, splitLine: { lineStyle: { color: "rgba(0,0,0,0.08)" } }, splitArea: { areaStyle: { color: ["rgba(61,139,209,0.01)", "rgba(61,139,209,0.04)"] } }, axisLine: { lineStyle: { color: "rgba(0,0,0,0.12)" } } },
-        series: [{ type: "radar", data: [{ name: "角色置信度", value: usable.map(function (r) { return Number(r.claims[0].confidence) * 100; }), lineStyle: { color: COLORS.base, width: 2 }, itemStyle: { color: COLORS.base }, areaStyle: { color: "rgba(95,117,201,0.12)" }, symbolSize: 6 }] }]
+        series: [{ type: "radar", data: [{ name: "证据置信度", value: usable.map(function (r) { return Number(r.confidence) * 100; }), lineStyle: { color: COLORS.base, width: 2 }, itemStyle: { color: COLORS.base }, areaStyle: { color: "rgba(95,117,201,0.12)" }, symbolSize: 6 }] }]
+      };
+    }
+    function stanceBarOption(reports) {
+      const usable = reports.filter(function (r) { return ["PORTFOLIO_RISK", "POSITION"].indexOf(r.role) < 0 && finite(r.score); });
+      return {
+        animationDuration: 180,
+        grid: { top: 12, right: 26, bottom: 28, left: 70, containLabel: true },
+        tooltip: { trigger: "item", formatter: function (p) { const r = usable[p.dataIndex]; return '<b>' + esc(roleName(r.role)) + '</b><br>立场分数：' + (Number(r.score) > 0 ? "+" : "") + number(r.score, 1) + '<br>判断：' + esc(r.verdict) + '<br>证据置信度：' + pct(r.confidence); } },
+        xAxis: { type: "value", min: -100, max: 100, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: function (v) { return (v > 0 ? "+" : "") + v; } }, splitLine: { show: false } },
+        yAxis: { type: "category", inverse: true, data: usable.map(function (r) { return roleName(r.role); }), axisLine: { show: false }, axisTick: { show: false }, axisLabel: AXIS_LABEL, splitLine: { show: false } },
+        series: [{ type: "bar", data: usable.map(function (r) { return { value: Number(r.score), itemStyle: { color: roleTone(r.score) } }; }), barWidth: 12, label: { show: true, position: "right", formatter: function (p) { return (p.value > 0 ? "+" : "") + p.value; }, color: "rgba(0,0,0,0.7)", fontSize: 10 }, markLine: { silent: true, symbol: "none", data: [{ xAxis: 0 }], lineStyle: { color: "rgba(0,0,0,0.3)", type: [3, 2], width: 1 }, label: { show: false } } }]
       };
     }
     function renderRisk() {
       const rows = model.decisions;
-      document.getElementById("risk-content").innerHTML = '<div class="dashboard-grid"><div class="control-row span-8"><div><div class="control-title">角色意见是否一致</div><div class="control-note">图形越饱满，代表各角色的证据覆盖和判断置信度越高。</div></div>' + selector("risk-symbol", rows, "选择标的") + '</div><div id="risk-dynamic" class="span-8"></div></div>';
+      document.getElementById("risk-content").innerHTML = '<div class="dashboard-grid"><div class="control-row span-8"><div><div class="control-title">角色意见是否一致</div><div class="control-note">雷达图衡量证据质量；覆盖相同时形状可能相近。公司判断差异看右侧 -100 至 +100 立场图。</div></div>' + selector("risk-symbol", rows, "选择标的") + '</div><div id="risk-dynamic" class="span-8"></div></div>';
       const select = document.getElementById("risk-symbol");
       select.addEventListener("change", function () { updateRisk(select.value); });
       updateRisk(select.value);
@@ -300,10 +336,16 @@
       const bull = bundle.reports.find(function (r) { return r.role === "BULL"; });
       const bear = bundle.reports.find(function (r) { return r.role === "BEAR"; });
       const mode = bundle.row.cross_validation_mode || "INDEPENDENT_RULE_BASED_PASSES";
-      const conflicts = bundle.row.conflicts || "没有记录到高重要性冲突";
-      const missing = evidence.missing_evidence || "没有关键证据缺口";
-      document.getElementById("risk-dynamic").innerHTML = '<div class="dashboard-grid"><div class="status-row span-8"><span class="status-chip">逻辑 ' + esc(decision.thesis_status || "—") + '</span><span class="status-chip">风险 ' + esc(decision.risk_status || "—") + '</span><span class="status-chip">总置信度 ' + pct(decision.confidence) + '</span></div>' + chartCard(symbol + " · 角色置信度", "role-radar", "span-5", "tall", "共享证据包", "多角色分析置信度雷达图") + '<section class="widget-card span-3"><div class="widget-title"><span class="widget-title-text">对抗结论</span><span class="widget-timestamp">规则化检查</span></div><div class="case-stack"><div class="case-row"><div class="case-label"><span>看多</span><span>' + esc(bull ? bull.verdict : "不适用") + '</span></div><div class="case-copy">' + esc(roleShort("BULL")) + '</div></div><div class="case-row"><div class="case-label"><span>看空</span><span>' + esc(bear ? bear.verdict : "不适用") + '</span></div><div class="case-copy">' + esc(roleShort("BEAR")) + '</div></div><div class="case-row"><div class="case-label"><span>证据缺口</span></div><div class="case-copy">' + esc(missing) + '</div></div></div></section><details class="evidence-details span-8"><summary>查看证据与交叉验证边界</summary><div class="evidence-grid"><div class="evidence-key">当前模式</div><div class="evidence-value">' + esc(mode) + '</div><div class="evidence-key">待处理冲突</div><div class="evidence-value">' + esc(conflicts) + '</div><div class="evidence-key">证据编号</div><div class="evidence-value">' + esc(decision.evidence_ids || "—") + '</div><div class="evidence-key">实现边界</div><div class="evidence-value">这是共享证据包上的规则化独立角色检查，不是开放式 Agent 辩论。高重要性冲突应阻止加仓并进入人工复核。</div></div></details></div>';
+      const conflicts = parseJson(bundle.row.conflicts, []);
+      const bullBear = parseJson(bundle.row.bull_bear_review, {});
+      const confidence = parseJson(decision.confidence_breakdown, {});
+      const missing = parseJson(evidence.missing_evidence, []);
+      const missingText = Array.isArray(missing) && missing.length ? missing.join("、") : "没有关键证据缺口";
+      const conflictText = conflicts.length ? conflicts.map(function (c) { return c.summary || c.status || "未命名冲突"; }).join(" ") : "没有记录到高重要性未解决冲突。";
+      const roleEntries = bundle.reports.filter(function (r) { return r.role !== "POSITION"; }).map(function (r) { return '<details class="role-entry"><summary><span class="role-score" style="color:' + roleTone(r.score) + '">' + esc(roleName(r.role)) + ' ' + (Number(r.score) > 0 ? "+" : "") + esc(r.score) + '</span><span>' + esc(r.verdict || "—") + '</span><span class="role-confidence">证据置信度 ' + pct(r.confidence) + '</span></summary><div class="role-entry-body"><div>' + esc(r.rationale || "没有角色理由") + '</div><div class="role-meta"><span>来源：Arrays 事实 + 透明规则推导</span><span>公式：' + esc(r.score_formula || "—") + '</span></div><div class="role-evidence">证据：' + esc((r.evidence_ids || []).join ? r.evidence_ids.join("、") : r.evidence_ids || "—") + '<br>缺口：' + esc((r.missing_evidence || []).join ? (r.missing_evidence || []).join("、") : r.missing_evidence || "无") + '</div></div></details>'; }).join("");
+      document.getElementById("risk-dynamic").innerHTML = '<div class="dashboard-grid"><div class="status-row span-8"><span class="status-chip">动作 ' + esc(actionZh(decision.action)) + '</span><span class="status-chip">逻辑 ' + esc(decision.thesis_status || "—") + '</span><span class="status-chip">风险 ' + esc(decision.risk_status || "—") + '</span><span class="status-chip">总置信度 ' + pct(decision.confidence) + '</span></div><div class="risk-callout span-8"><div class="risk-callout-label">为什么今天是这个动作</div><div class="risk-callout-value">' + esc(decision.reason || "—") + '</div><div class="risk-callout-copy">决定性证据：' + esc(decision.decisive_evidence || "—") + '<br>相反证据：' + esc(decision.contrary_evidence || "—") + '</div></div>' + chartCard(symbol + " · 证据置信度", "role-radar", "span-4", "tall", "不是收益概率", "不同角色证据置信度雷达图") + chartCard(symbol + " · 角色立场", "role-stance", "span-4", "tall", "-100 看空 · +100 看多", "不同角色看多看空立场条形图") + '<div class="confidence-grid span-8"><div class="confidence-stat"><div class="confidence-stat-label">数据覆盖</div><div class="confidence-stat-value">' + pct(confidence.data_coverage) + '</div></div><div class="confidence-stat"><div class="confidence-stat-label">数据新鲜度</div><div class="confidence-stat-value">' + pct(confidence.freshness) + '</div></div><div class="confidence-stat"><div class="confidence-stat-label">最弱关键角色</div><div class="confidence-stat-value">' + pct(confidence.critical_role_evidence) + '</div></div><div class="confidence-stat"><div class="confidence-stat-label">角色一致度</div><div class="confidence-stat-value">' + pct(confidence.role_agreement) + '</div></div><div class="confidence-stat"><div class="confidence-stat-label">最终上限</div><div class="confidence-stat-value">' + pct(confidence.final_cap) + '</div></div></div><div class="confidence-formula span-8">置信度不是“赚到钱的概率”。它由数据覆盖、新鲜度、最弱关键角色、一致度加权，再受估值预期方法、最弱角色和组合数据缺失上限约束。<br>' + esc(confidence.formula || "—") + '</div><section class="widget-card span-4"><div class="widget-title"><span class="widget-title-text">Bull / Bear</span><span class="widget-timestamp">同一证据包</span></div><div class="case-stack"><div class="case-row"><div class="case-label"><span>看多 ' + (bull ? (Number(bull.score) > 0 ? "+" : "") + esc(bull.score) : "—") + '</span><span>' + esc(bull ? bull.verdict : "不适用") + '</span></div><div class="case-copy">' + esc(bull ? bull.rationale : "—") + '</div></div><div class="case-row"><div class="case-label"><span>看空 ' + (bear ? (Number(bear.score) > 0 ? "+" : "") + esc(bear.score) : "—") + '</span><span>' + esc(bear ? bear.verdict : "不适用") + '</span></div><div class="case-copy">' + esc(bear ? bear.rationale : "—") + '</div></div></div></section><section class="widget-card span-4"><div class="widget-title"><span class="widget-title-text">交叉验证边界</span><span class="widget-timestamp">' + esc(mode) + '</span></div><div class="case-stack"><div class="case-row"><div class="case-label"><span>冲突</span></div><div class="case-copy">' + esc(conflictText) + '</div></div><div class="case-row"><div class="case-label"><span>证据缺口</span></div><div class="case-copy">' + esc(missingText) + '</div></div></div></section><details class="evidence-details span-8"><summary>逐角色查看判断依据</summary><div class="role-ledger">' + roleEntries + '</div></details><details class="evidence-details span-8"><summary>查看来源分类与实现边界</summary><div class="evidence-grid"><div class="evidence-key">证据编号</div><div class="evidence-value">' + esc(decision.evidence_ids || "—") + '</div><div class="evidence-key">数据分类</div><div class="evidence-value">' + esc(decision.data_classification || "—") + '</div><div class="evidence-key">实现方式</div><div class="evidence-value">这是共享 Arrays 证据包上的隔离规则角色检查；当前 Alva Agent 没有注册模型提供方，因此没有伪装成开放式 LLM 辩论。</div></div></details></div>';
       initChart("role-radar", radarOption(bundle.reports));
+      initChart("role-stance", stanceBarOption(bundle.reports));
     }
     function renderMethod() {
       const sample = model.decisions[0] || {};
@@ -331,7 +373,8 @@
         event.preventDefault(); activateTab(tabs[next].dataset.tab, true, true);
       });
       window.addEventListener("hashchange", function () { activateTab(TAB_BY_HASH[window.location.hash.slice(1)] || "today", false, false); });
-      activateTab(TAB_BY_HASH[window.location.hash.slice(1)] || "today", false, false);
+      const requestedTab = new URLSearchParams(window.location.search).get("tab");
+      activateTab(TAB_BY_HASH[window.location.hash.slice(1)] || TAB_BY_HASH[requestedTab] || "today", false, false);
     }
     function showError(error) {
       document.querySelectorAll(".tab-panel > div").forEach(function (container) { container.innerHTML = '<div class="error">暂时无法读取最新分析。请稍后刷新；私有 Playbook 需要有效的 Alva 查看权限。</div>'; });

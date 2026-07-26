@@ -11,13 +11,15 @@
 
 ## Data sources & freshness
 
-底层 Automation `mag7-value-decisions` 在工作日每天 13:00 UTC 刷新。每次运行读取 Alva Arrays 的公司资料、美国股票 1 小时 RTH 价格、市场指标（市值、P/E、1 年价格变化）、年度 EPS 共识预期和未来财报日期。页面在浏览器中直接读取最新一次 Automation 结果；刷新时间显示在“今日的决策”和“估值区间”中。EPS 取未来年度中分析师覆盖数最高的共识行；没有可用年度预期时回退到 EPS_TTM。
+底层 Automation `mag7-value-decisions` 在工作日每天 13:00 UTC 刷新。每次运行读取 Alva Arrays 的公司资料、美国股票 1 小时 RTH 价格、市场指标（市值、P/E、1 年价格变化）、未来四个季度的 EPS 中位数共识（不足四季时回退下一财年，再不足时回退 EPS_TTM）、未来财报日期，以及 ROIC、季度营收同比、季度 EPS 同比、毛利率、经营利润率、自由现金流率、负债权益比和流动比率。行业角色还读取对应行业 ETF 的 1 年价格变化；Arrays 返回的百分点会在计算前转换为小数，原始值和转换规则保存在证据包。页面在浏览器中直接读取最新一次 Automation 批次，批次时间戳一致，四个 Tab 因此使用同一批数据。
 
 ## How this playbook works
 
-每家公司先进入同一个带时间戳的证据包，再经过 Business、Fundamental、Valuation、Industry/Cycle 和 Thesis 的规则化独立检查。Core Circle 额外生成 Bull 与 Bear 情景，用来暴露上行假设、下行风险和证据缺口。估值使用下一年度 EPS 乘以业务模型对应的 Bear / Base / Bull 政策倍数。买入上限是 Base 值乘以 75%；减仓复核从 Bull 值的 90% 开始；退出复核从 Bull 值的 105% 开始。动作只对 Core Circle 生效，Learning Circle 固定为 `RESEARCH_ONLY`。
+每家公司先进入同一个带时间戳的证据包，再经过 Business、Fundamental、Valuation、Industry/Cycle、Thesis、Bull、Bear、Thesis Risk、Portfolio Risk 和 Position 的隔离规则检查。每个角色只使用证据包，不读取其他角色的结论；角色分数是有公式的计算分析，不是市场事实。Bull 与 Bear 都从同一组真实输入提出相反情景；若两边同时达到高强度，冲突会被保留，不能用多数票抹平。
 
-当前模式是 `INDEPENDENT_RULE_BASED_PASSES`：多个角色在同一证据包上独立运行，并输出可核对的判断。它还不是开放式多 Agent 辩论，也没有 Research Manager 或 Portfolio Manager 让角色互相质询后自行改写结论。页面会明确显示这条边界；高重要性冲突应阻止加仓并进入人工复核。
+估值使用未来四季度 EPS 中位数共识乘以业务模型对应的 Bear / Base / Bull 政策倍数。买入上限是 Base 值乘以 75%；减仓复核从 Bull 值的 90% 开始；退出复核从 Bull 值的 105% 开始。动作只对 Core Circle 生效，Learning Circle 固定为 `RESEARCH_ONLY`。第三个 Tab 的雷达图展示证据置信度，正负条形图展示角色立场；它们不是收益概率。
+
+当前模式是 `INDEPENDENT_RULE_BASED_PASSES`。Alva 当前没有为 `@alva/pi` 注册模型提供方，因此本版本不会冒充开放式 LLM 辩论；页面会显示这一边界。置信度由数据覆盖、新鲜度、最弱关键角色和角色一致度加权，并受估值方法、最弱角色和组合数据缺失上限约束。高重要性冲突或逻辑风险否决会阻止加仓并进入人工复核。
 
 ## Position sizing
 
@@ -26,10 +28,12 @@ Core Circle 的模型目标仓位上限为单家公司 10%，默认目标为 8%�
 ## Blind spots
 
 - 估值倍数是策略假设，不是市场事实；Playbook 不提供单点内在价值。
-- EPS 共识可能滞后、覆盖数量有限，也不等于公司的真实结果。
+- EPS 共识可能滞后、覆盖数量有限，也不等于公司的真实结果；四季共识不足时会降级并压低置信度。
 - 价格信号使用 RTH 1 小时数据，无法代表盘前或盘后价格。
 - 未连接个人持仓、现金、成本、税务、流动性或相关性数据，因此仓位只表示模型上限。
-- 角色判断来自确定性规则检查，不等同于具备独立信息搜索和开放式质询能力的完整多 Agent 委员会。
+- 角色判断来自独立规则检查，不等同于具备独立信息搜索和开放式质询能力的完整 LLM 多 Agent 委员会；第三个 Tab 会显示这一实现边界。
+- 行业角色使用行业 ETF 相对回报作为周期代理，不替代同行业经营指标、产业链调研或管理层访谈。
+- 置信度是证据质量指标，不是盈利概率或推荐正确率。
 - 不包含完整现金流 DCF、管理层访谈、供应链实地验证或事件风险的人工复核。
 - Learning Circle 的半导体公司只用于研究，不会生成直接买入建议。
 
