@@ -205,20 +205,87 @@
     function selector(id, rows, label) {
       return '<label class="select-wrap" for="' + id + '"><span class="select-label">' + esc(label) + '</span><select class="symbol-select" id="' + id + '">' + rows.map(function (row) { return '<option value="' + esc(row.symbol) + '">' + esc(row.symbol) + ' · ' + esc(circleZh(row.circle)) + '</option>'; }).join("") + '</select></label>';
     }
+    function valuationState(deviation) {
+      return deviation < -5 ? "低于 Base" : deviation > 5 ? "高于 Base" : "接近 Base";
+    }
     function valuationScatterOption(rows) {
       const points = rows.filter(function (r) { return finite(r.current_price) && finite(r.base_value) && Number(r.base_value) !== 0; }).map(function (r) {
-        return { name: r.symbol, value: [((Number(r.current_price) / Number(r.base_value)) - 1) * 100, Number(r.confidence || 0) * 100, Number(r.target_weight || 0) * 100], symbol: r.circle === "LEARNING" ? "diamond" : "circle", itemStyle: r.circle === "LEARNING" ? { color: "rgba(255,255,255,0.9)", borderColor: COLORS.muted, borderWidth: 1.5 } : { color: actionColor(r.action) }, row: r };
+        const deviation = ((Number(r.current_price) / Number(r.base_value)) - 1) * 100;
+        return { name: r.symbol, value: deviation, state: valuationState(deviation), learning: r.circle === "LEARNING", color: actionColor(r.action), row: r };
+      }).sort(function (a, b) { return a.value - b.value; });
+      const maxAbs = Math.max(12.5, points.reduce(function (max, point) { return Math.max(max, Math.abs(Number(point.value))); }, 0));
+      const extent = Math.ceil(maxAbs * 2 / 5) * 5;
+      const lineData = points.map(function (point) {
+        return { name: point.name, value: point.value, row: point.row, state: point.state, itemStyle: { color: point.learning ? "rgba(131,131,131,0.42)" : point.color, borderRadius: 1 } };
       });
-      const sample = rows[0] || {};
-      const buyX = -Number(sample.margin_of_safety || 0) * 100;
+      const markerData = points.map(function (point, index) {
+        return {
+          name: point.name,
+          value: [point.value, index],
+          row: point.row,
+          state: point.state,
+          symbol: point.learning ? "diamond" : "circle",
+          symbolSize: point.learning ? 13 : 12,
+          itemStyle: point.learning ? { color: "rgba(255,255,255,0.96)", borderColor: COLORS.muted, borderWidth: 1.5 } : { color: point.color },
+          label: { position: point.value < 0 ? "left" : "right", distance: 7 }
+        };
+      });
       return {
         animationDuration: 180,
-        grid: { top: 28, right: 26, bottom: 38, left: 20, containLabel: true },
-        tooltip: { trigger: "item", formatter: function (p) { const r = p.data.row; return '<b>' + esc(r.symbol) + '</b><br>价格 / Base：' + pctPoint(p.value[0]) + '<br>当前价：' + money(r.current_price) + '<br>动作：' + esc(actionZh(r.action)); } },
-        xAxis: { type: "value", name: "相对 Base", nameLocation: "middle", nameGap: 28, nameTextStyle: AXIS_LABEL, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: function (v) { return (v > 0 ? "+" : "") + v + "%"; } }, splitLine: { show: false } },
-        yAxis: { type: "value", min: 0, max: 100, name: "置信度", nameTextStyle: AXIS_LABEL, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, formatter: "{value}%" }, splitLine: { show: false } },
-        series: [{ type: "scatter", data: points, symbolSize: function (v) { return Math.max(13, 13 + Number(v[2] || 0)); }, label: { show: true, formatter: "{b}", position: "top", color: "rgba(0,0,0,0.7)", fontSize: 11 }, labelLayout: { hideOverlap: true, moveOverlap: "shiftY" }, emphasis: { scale: 1.15 }, markArea: { silent: true, itemStyle: { color: "rgba(64,165,68,0.08)" }, data: [[{ xAxis: -200 }, { xAxis: buyX }]] }, markLine: { silent: true, symbol: "none", lineStyle: { color: "rgba(0,0,0,0.3)", type: [3, 2], width: 1 }, label: { show: false }, data: [{ xAxis: 0 }] } }]
+        grid: { top: 18, right: 12, bottom: 38, left: 12, containLabel: true },
+        tooltip: {
+          trigger: "item",
+          backgroundColor: "rgba(255,255,255,0.96)",
+          borderColor: "rgba(0,0,0,0.08)",
+          borderWidth: 1,
+          borderRadius: 6,
+          padding: 12,
+          textStyle: { fontFamily: FONT, fontSize: 12, fontWeight: 400, color: "rgba(0,0,0,0.9)" },
+          extraCssText: "box-shadow:none;max-width:260px;",
+          formatter: function (p) {
+            const r = p.data.row;
+            const deviation = Array.isArray(p.value) ? Number(p.value[0]) : Number(p.value);
+            return '<b>' + esc(r.symbol) + ' · ' + esc(p.data.state) + '</b><br>相对 Base：' + (deviation > 0 ? "+" : "") + pctPoint(deviation) + '<br>当前价：' + money(r.current_price) + '<br>Base 价值：' + money(r.base_value) + '<br>估值方法：预期 EPS × 策略 Base 倍数<br>动作：' + esc(actionZh(r.action)) + '<br>证据置信度：' + pct(r.confidence);
+          }
+        },
+        xAxis: { type: "value", min: -extent, max: extent, name: "相对 Base 价值的偏离", nameLocation: "middle", nameGap: 28, nameTextStyle: AXIS_LABEL, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, hideOverlap: true, formatter: function (v) { return (v > 0 ? "+" : "") + v + "%"; } }, splitLine: { show: false } },
+        yAxis: { type: "category", inverse: true, data: points.map(function (p) { return p.name; }), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { ...AXIS_LABEL, interval: 0 }, splitLine: { show: false } },
+        series: [
+          {
+            type: "bar",
+            data: lineData,
+            barWidth: 4,
+            silent: true,
+            emphasis: { disabled: true },
+            markArea: {
+              silent: true,
+              label: { show: false },
+              data: [
+                [{ xAxis: -extent, itemStyle: { color: "rgba(64,165,68,0.045)" } }, { xAxis: -5 }],
+                [{ xAxis: -5, itemStyle: { color: "rgba(95,117,201,0.065)" } }, { xAxis: 5 }],
+                [{ xAxis: 5, itemStyle: { color: "rgba(199,100,102,0.045)" } }, { xAxis: extent }]
+              ]
+            },
+            markLine: { silent: true, symbol: "none", lineStyle: { color: "rgba(0,0,0,0.3)", type: [3, 2], width: 1 }, label: { show: false }, data: [{ xAxis: 0 }] }
+          },
+          {
+            type: "scatter",
+            data: markerData,
+            z: 3,
+            label: { show: true, color: "rgba(0,0,0,0.78)", fontFamily: FONT, fontSize: 10, formatter: function (p) { const v = Number(p.value[0]); return (v > 0 ? "+" : "") + number(v, 1) + "% · " + p.data.state; } },
+            emphasis: { scale: 1.12 }
+          }
+        ]
       };
+    }
+    function setTodayChartHeights(rows) {
+      const count = rows.filter(function (r) { return finite(r.current_price) && finite(r.base_value) && Number(r.base_value) !== 0; }).length;
+      const compact = window.matchMedia("(max-width: 980px)").matches;
+      const valuationHeight = Math.max(compact ? 400 : 410, count * (compact ? 44 : 40) + 92);
+      const valuationEl = document.getElementById("today-scatter");
+      const earningsEl = document.getElementById("earnings-scatter");
+      if (valuationEl) valuationEl.style.height = valuationHeight + "px";
+      if (earningsEl) earningsEl.style.height = compact ? "340px" : valuationHeight + "px";
     }
     function earningsOption(rows) {
       const now = Date.now();
@@ -252,7 +319,8 @@
       const holds = core.filter(function (r) { return r.action === "HOLD"; }).length;
       const sells = core.filter(function (r) { return r.action === "TRIM_REVIEW" || r.action === "EXIT_REVIEW"; }).length;
       const asOf = rows.map(function (r) { return r.as_of; }).filter(Boolean).sort().slice(-1)[0] || "";
-      document.getElementById("today-content").innerHTML = '<div class="dashboard-grid"><div class="pulse-strip span-8"><div class="pulse-item"><div class="pulse-label">买入复核</div><div class="pulse-value">' + adds + '</div><div class="pulse-note">进入安全边际</div></div><div class="pulse-item"><div class="pulse-label">持有</div><div class="pulse-value">' + holds + '</div><div class="pulse-note">等待新证据</div></div><div class="pulse-item"><div class="pulse-label">卖出复核</div><div class="pulse-value">' + sells + '</div><div class="pulse-note">减仓或退出</div></div><div class="pulse-item"><div class="pulse-label">最新更新</div><div class="pulse-value small">' + esc(asOf ? new Date(asOf).toLocaleString() : "—") + '</div><div class="pulse-note">无变化时保持安静</div></div></div>' + chartCard("估值位置图", "today-scatter", "span-5", "tall", "越靠左越便宜", "标的估值折价与分析置信度散点图") + chartCard("下一次财报", "earnings-scatter", "span-3", "tall", "事件风险", "距离下一次财报日期散点图") + '<div class="chart-caption span-8"><span class="legend-key"><i class="legend-swatch add"></i>买入复核</span><span class="legend-key"><i class="legend-swatch hold"></i>持有</span><span class="legend-key"><i class="legend-swatch sell"></i>减仓 / 退出</span><span class="legend-key"><i class="legend-swatch learn"></i>Learning Circle</span></div>' + chartCard("Core Circle · 当前价格在估值带中的位置", "range-lanes", "span-8", "tall", "Base = 100%", "Core Circle 当前价格与 Bear Bull 估值带") + '</div>';
+      document.getElementById("today-content").innerHTML = '<div class="dashboard-grid"><div class="pulse-strip span-8"><div class="pulse-item"><div class="pulse-label">买入复核</div><div class="pulse-value">' + adds + '</div><div class="pulse-note">进入安全边际</div></div><div class="pulse-item"><div class="pulse-label">持有</div><div class="pulse-value">' + holds + '</div><div class="pulse-note">等待新证据</div></div><div class="pulse-item"><div class="pulse-label">卖出复核</div><div class="pulse-value">' + sells + '</div><div class="pulse-note">减仓或退出</div></div><div class="pulse-item"><div class="pulse-label">最新更新</div><div class="pulse-value small">' + esc(asOf ? new Date(asOf).toLocaleString() : "—") + '</div><div class="pulse-note">无变化时保持安静</div></div></div>' + chartCard("相对 Base 的估值位置", "today-scatter", "span-5", "tall", "0% = Base · 由低到高", "每家公司独占一行的相对 Base 估值偏离图，按偏离从低到高排序") + chartCard("下一次财报", "earnings-scatter", "span-3", "tall", "事件风险", "距离下一次财报日期散点图") + '<div class="chart-caption span-8"><span class="legend-key"><i class="legend-swatch add"></i>买入复核</span><span class="legend-key"><i class="legend-swatch hold"></i>持有</span><span class="legend-key"><i class="legend-swatch sell"></i>减仓 / 退出</span><span class="legend-key"><i class="legend-swatch learn"></i>Learning Circle</span><span>位置分区：低于 −5% / 接近 ±5% / 高于 +5%；只帮助阅读位置，不代表公允价值确定性。</span></div>' + chartCard("Core Circle · 当前价格在估值带中的位置", "range-lanes", "span-8", "tall", "Base = 100%", "Core Circle 当前价格与 Bear Bull 估值带") + '</div>';
+      setTodayChartHeights(rows);
       initChart("today-scatter", valuationScatterOption(rows));
       initChart("earnings-scatter", earningsOption(rows));
       initChart("range-lanes", rangeLaneOption(rows));
@@ -385,7 +453,7 @@
       if (!model.decisions.length) throw new Error("No current decision records returned");
       renderToday(); renderValuation(); renderRisk(); renderMethod(); setupTabs();
       readAlfsJson(ROLE_REPORTS_PATH).then(function (value) { model.roleRows = latestBySymbol(unwrap(value)); const riskSelect = document.getElementById("risk-symbol"); if (riskSelect) updateRisk(riskSelect.value); }).catch(function (error) { console.warn("Role-report details are temporarily unavailable; embedded reports remain visible.", error); });
-      window.addEventListener("resize", function () { requestAnimationFrame(function () { Object.keys(charts).forEach(function (id) { if (charts[id]) charts[id].resize(); }); }); });
+      window.addEventListener("resize", function () { requestAnimationFrame(function () { setTodayChartHeights(model.decisions); Object.keys(charts).forEach(function (id) { if (charts[id]) charts[id].resize(); }); }); });
     }).catch(showError);
   </script>
 </body>

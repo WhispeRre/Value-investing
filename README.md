@@ -13,7 +13,7 @@
 
 ## 线上 Playbook
 
-当前公开版本：`v1.3.4`
+当前公开版本：`v1.3.5`
 链接：[Mag 7 Value Decisions](https://alva.ai/u/1148973244/playbooks/mag7-value-investing)
 四个 Tab 都读取同一批 Automation 输出：
 
